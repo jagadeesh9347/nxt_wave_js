@@ -1,0 +1,117 @@
+const express = require('express')
+const app = express()
+const {open} = require('sqlite')
+const path = require('path')
+const db_driver = require('sqlite3')
+const connection = path.join(__dirname, 'moviesData.db')
+const intializeandconnectdb = async () => {
+  try {
+    db = await open({
+      filename: connection,
+      driver: db_driver.Database,
+    })
+    app.listen(3000, () => {
+      console.log('server is running at http//:localhost3000/')
+    })
+  } catch (e) {
+    console.log(`DBerror ${e.message}`)
+    process.exit(1)
+  }
+}
+intializeandconnectdb()
+//get method
+
+app.get('/movies/', async (request, response) => {
+  const information = `
+  SELECT *
+  FROM
+  movie
+  ORDER BY
+  movie_id;`
+  let got = await db.all(information)
+  response.send(got)
+})
+
+// post method
+app.use(express.json())
+app.post('/movies/', async (request, response) => {
+  const movie_details = request.body
+  const {director_id, movie_name, lead_actor} = movie_details
+  const retrive = `
+  INSERT INTO 
+  movie(director_id,
+    movie_name,
+    lead_actor)
+    VALUES(
+      ${director_id},
+      '${movie_name}',
+      '${lead_actor}'
+    );`
+  const poost = await db.run(retrive)
+  const id = poost.lastId
+  response.send('Movie Successfully Added')
+})
+
+// get particular one
+
+app.get('/movies/:movieId', async (request, response) => {
+  const {movie_id} = request.params
+  const query = `
+    SELECT * FROM movie WHERE movie_id='${movie_id}';
+    `
+  const ans = await db.get(query)
+  response.send(ans)
+})
+
+//put method
+
+app.put('/movies/:movieId', async (request, response) => {
+  const {movie_id} = request.params
+  const info = request.body
+  const {director_id, movie_name, lead_actor} = movie_details
+  const myquery = `
+     UPDATE 
+     movie
+     SET 
+     director_id=${director_id},
+     movie_name='${movie_name}',
+     lead_actor='${lead_actor}'
+     WHERE 
+     movie_id=${movie_id};`
+  await db.run(myquery)
+  response.send('Movie Details Updated')
+})
+
+//delete
+app.delete('movies/:movieId', async (request, response) => {
+  const {movie_id} = request.params
+  const delete_movie = `
+  DELETE FROM movie 
+  WHERE 
+  movie_id=${movie_id}`
+  await db.run(delete_movie)
+  response.send('Movie Removed')
+})
+
+//directors get
+app.get('/directors/', async (request, response) => {
+  const get_directors = `
+  SELECT * FROM director
+  ORDER BY
+  director_id;`
+  const direc_info = await db.all(get_directors)
+  response.send(direc_info)
+})
+//specific director
+app.get('/directors/:directorId/movies/', async (request, response) => {
+  const {director_id} = request.params
+  let gotquery = `
+  SELECT m.movie_name
+FROM Movie m
+JOIN Director d ON m.director_id = d.director_id
+WHERE d.director_id = ${director_id};
+`
+  const details = await db.all(gotquery)
+  response.send(details)
+})
+module.exports = app
